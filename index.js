@@ -1,16 +1,19 @@
 const express = require('express');
 const dotenv = require('dotenv');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
+
 dotenv.config();
+
 const app = express();
 app.use(cors());
+app.use(express.json()); 
+
 const port = process.env.PORT || 8080;
 
 
-const uri = "mongodb+srv://drivefleet:Riad1136@cluster0.jtfupfl.mongodb.net/?appName=Cluster0";
+const uri = process.env.MONGODB_URI;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -21,26 +24,54 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
 
+    const db = client.db('drivefleetdb');
+    const carsCollection = db.collection('cars');
 
-    
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
+    app.get('/cars', async (req, res) => {
+      try { 
+        const result = await carsCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to fetch cars', error });
+      }
+    });
+
+    app.get('/cars/:carsId', async (req, res) => {
+      try { 
+        const { carsId } = req.params;
+
+        if (!ObjectId.isValid(carsId)) {
+          return res.status(400).send({ message: 'Invalid car ID' });
+        }
+
+        const query = { _id: new ObjectId(carsId) };
+        const result = await carsCollection.findOne(query);
+
+        if (!result) {
+          return res.status(404).send({ message: 'Car not found' });
+        }
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to fetch car', error });
+      }
+    });
+
+    console.log("Successfully connected to MongoDB!");
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+    process.exit(1); // Stop server if DB connection fails
   }
 }
-run().catch(console.dir);
 
+run();
 
 app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
+  res.send('Hello World!');
+});
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+  console.log(`Server listening on port ${port}`);
+});
