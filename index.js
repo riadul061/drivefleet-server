@@ -29,6 +29,7 @@ async function run() {
     const db = client.db('drivefleetdb');
     const carsCollection = db.collection('cars');
     const PricingCollection = db.collection('Pricing');
+    const exploreCollection = db.collection('explore');
 
     app.get('/cars', async (req, res) => {
       try { 
@@ -66,6 +67,36 @@ async function run() {
         res.send(result);
       } catch (error) {
         res.status(500).send({ message: 'Failed to fetch cars', error });
+      }
+    });
+
+    app.get('/explore', async (req, res) => {
+      try { 
+        const result = await exploreCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to fetch cars', error });
+      }
+    });
+
+    app.get('/explore/:exploreId', async (req, res) => {
+      try { 
+        const { exploreId } = req.params;
+
+        if (!ObjectId.isValid(exploreId)) {
+          return res.status(400).send({ message: 'Invalid car ID' });
+        }
+
+        const query = { _id: new ObjectId(exploreId) };
+        const result = await exploreCollection.findOne(query);
+
+        if (!result) {
+          return res.status(404).send({ message: 'Car not found' });
+        }
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to fetch car', error });
       }
     });
 
