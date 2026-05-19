@@ -28,6 +28,7 @@ async function run() {
 
     const db = client.db('drivefleetdb');
     const carsCollection = db.collection('cars');
+    const PricingCollection = db.collection('Pricing');
 
     app.get('/cars', async (req, res) => {
       try { 
@@ -56,6 +57,15 @@ async function run() {
         res.send(result);
       } catch (error) {
         res.status(500).send({ message: 'Failed to fetch car', error });
+      }
+    });
+
+    app.get('/Pricing', async (req, res) => {
+      try { 
+        const result = await PricingCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to fetch cars', error });
       }
     });
 
