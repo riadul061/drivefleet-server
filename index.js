@@ -99,6 +99,30 @@ async function run() {
 
         // GET all explore cars
         app.get('/explore', async (req, res) => {
+            const search = req.query.search || '';
+            const type = req.query.type || '';
+            
+            let query = {};
+
+    // Search
+    if (search) {
+        query.carName = {
+            $regex: search,
+            $options: 'i',
+        };
+    }
+
+    // Filter
+    if (type) {
+        query.carType = type;
+    }
+
+    const result = await exploreCollection
+        .find(query)
+        .toArray();
+
+    res.send(result);
+    
             try {
                 const result = await exploreCollection.find().toArray();
                 res.send(result);
