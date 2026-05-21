@@ -122,7 +122,7 @@ async function run() {
         .toArray();
 
     res.send(result);
-    
+
             try {
                 const result = await exploreCollection.find().toArray();
                 res.send(result);
@@ -165,7 +165,7 @@ async function run() {
             }
         });
          // UPDATE CAR
-        app.put('/explore/:id',verifyToken, async (req, res) => {
+        app.put('/explore/:id',async (req, res) => {
 
             const id = req.params.id;
 
@@ -195,7 +195,7 @@ async function run() {
         });
 
         // DELETE CAR
-        app.delete('/explore/:id', verifyToken, async (req, res) => {
+        app.delete('/explore/:id',async (req, res) => {
 
             const id = req.params.id;
 
@@ -208,6 +208,36 @@ async function run() {
             res.send(result);
         });
 
+         
+app.patch('/explore/:exploreId', verifyToken, async (req, res) => {
+    const { exploreId } = req.params;
+    const bookingData = req.body;
+
+    // Find Car
+    const explore = await exploreCollection.findOne({
+        _id: new ObjectId(exploreId)
+    });
+
+    if (!explore) {
+        return res.status(404).json({ message: 'Car not found' });
+    }
+
+    await exploreCollection.updateOne(
+        { _id: new ObjectId(exploreId) },
+        {
+            $inc: { bookingCount: 1 },
+            $set: { lastBookedAt: new Date() }
+        }
+    );
+
+    const result = await exploreCollection.insertOne({
+        ...bookingData,
+        carId: exploreId,
+        bookedAt: new Date()
+    });
+
+    res.send(result);
+});
         console.log("Successfully connected to MongoDB!");
     } catch (error) {
         console.error("MongoDB connection failed:", error);
