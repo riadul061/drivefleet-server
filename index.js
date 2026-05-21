@@ -2,7 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
-
+const { createRemoteJWKSet, jwtVerify } = require('jose-cjs');
 dotenv.config();
 
 const app = express();
@@ -11,6 +11,8 @@ app.use(express.json());
 
 const port = process.env.PORT || 8080;
 const uri = process.env.MONGODB_URI;
+const JWKS = createRemoteJWKSet(new URL(`${process.env.CLIENT_URL}/api/auth/jwks`));
+
 
 const client = new MongoClient(uri, {
     serverApi: {
@@ -19,7 +21,31 @@ const client = new MongoClient(uri, {
         deprecationErrors: true,
     }
 });
+const logger = (req, res, next) => {
+  console.log(`${req.method} | ${req.url}`);
+  next();
+};
+const verifyToken = async (req, res, next) => {
+  const { authorization } = req.headers;
+  //   console.log(req.headers, 'from verify token');
+   const token = authorization?.split(' ')[1];
+  //   console.log(token);
 
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorize' });
+  }
+
+  try {
+    const JWKS = createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'));
+    const { payload } = await jwtVerify(token, JWKS);
+    req.user = payload;
+
+    next();
+  } catch (error) {
+    console.error('Token validation failed:', error);
+    return res.status(401).json({ message: 'Unauthorize' });
+  }
+};
 async function run() {
     try {
         await client.connect();
@@ -94,7 +120,7 @@ async function run() {
         });
 
         // GET single explore car
-        app.get('/explore/:exploreId', async (req, res) => {
+        app.get('/explore/:exploreId',logger,verifyToken, async (req, res) => {
             try {
                 const { exploreId } = req.params;
 
@@ -115,7 +141,7 @@ async function run() {
             }
         });
          // UPDATE CAR
-        app.put('/explore/:id', async (req, res) => {
+        app.put('/explore/:id',verifyToken, async (req, res) => {
 
             const id = req.params.id;
 
@@ -145,7 +171,7 @@ async function run() {
         });
 
         // DELETE CAR
-        app.delete('/explore/:id', async (req, res) => {
+        app.delete('/explore/:id', verifyToken, async (req, res) => {
 
             const id = req.params.id;
 
